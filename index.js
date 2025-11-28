@@ -73,6 +73,27 @@ async function run() {
       res.send(result);
     });
 
+
+    app.get("/partners/top-rated", async (req, res) => {
+      try {
+        const topPartners = await partnersCollection
+          .find()
+          .sort({ rating: -1 }) // highest rating first
+          .limit(3) // only top 3
+          .toArray();
+
+        res.send({
+          success: true,
+          partners: topPartners,
+        });
+        console.log("Top-rated partners route hit");
+
+      } 
+      catch (err) {
+        console.error(err);
+        res.status(500).send({ success: false, message: "Server error" });
+      }
+    });
     // GET partner by ID
     app.get('/partners/:id', async (req, res) => {
       const { id } = req.params;
@@ -221,6 +242,13 @@ async function run() {
 
       res.send({ success: true, result });
     });
+
+    // GET top-rated partners
+    // GET top-rated partners
+    
+
+
+
 
 
   } catch (err) {
