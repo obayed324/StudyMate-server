@@ -88,35 +88,45 @@ async function run() {
     });
 
     // POST partner request
+    // POST partner request
     app.post('/partners/:id/request', async (req, res) => {
       const { id } = req.params;
       const { userEmail } = req.body;
 
-      if (!userEmail) return res.status(400).send({ success: false, message: 'User email required' });
-      if (!ObjectId.isValid(id)) return res.status(400).send({ success: false, message: 'Invalid partner ID' });
+      if (!userEmail)
+        return res.status(400).send({ success: false, message: "User email required" });
 
-      const filter = { _id: new ObjectId(id) };
+      const partner = await partnersCollection.findOne({ _id: new ObjectId(id) });
+      if (!partner)
+        return res.status(404).send({ success: false, message: "Partner not found" });
 
-      // Increment partnerCount
-      const update = { $inc: { partnerCount: 1 } };
-      await partnersCollection.updateOne(filter, update);
+      // increase partner count
+      await partnersCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $inc: { partnerCount: 1 } }
+      );
 
-      // Save request to partnerRequests collection
-      const partner = await partnersCollection.findOne(filter);
-      if (!partner) return res.status(404).send({ success: false, message: 'Partner not found' });
-
-      const request = {
+      // save FULL partner data + user email
+      const requestData = {
         partnerId: id,
         partnerName: partner.name,
-        partnerEmail: partner.email || null,
+        partnerImage: partner.profileimage,
+        subject: partner.subject,
+        studyMode: partner.studyMode,
+        availabilityTime: partner.availabilityTime,
+        location: partner.location,
+        experienceLevel: partner.experienceLevel,
+        rating: partner.rating,
+        partnerCount: partner.partnerCount + 1,
         requestedBy: userEmail,
         requestedAt: new Date()
       };
 
-      const insertResult = await partnerRequestsCollection.insertOne(request);
+      const result = await partnerRequestsCollection.insertOne(requestData);
 
-      res.send({ success: true, insertResult });
+      res.send({ success: true, message: "Request saved", result });
     });
+
 
     // POST /partners - Create a new partner profile
     app.post('/partners', verifyToken, async (req, res) => {
@@ -151,7 +161,7 @@ async function run() {
           message: 'Partner profile created successfully',
           partnerId: result.insertedId
         });
-      } 
+      }
       catch (err) {
         console.error(err);
         res.status(500).send({ success: false, message: 'Failed to create partner profile' });
@@ -168,12 +178,50 @@ async function run() {
         if (!partner) return res.status(404).send({ success: false, message: "Partner profile not found" });
 
         res.send({ success: true, partner });
-      } 
+      }
       catch (err) {
         console.error("Error fetching my-profile:", err);
         res.status(500).send({ success: false, message: "Server error" });
       }
     });
+
+    app.get('/my-requests', verifyToken, async (req, res) => {
+      const email = req.userEmail;
+      const requests = await partnerRequestsCollection
+        .find({ requestedBy: email })
+        .toArray();
+
+      res.send({ success: true, requests });
+    });
+
+    app.put('/my-requests/:id', verifyToken, async (req, res) => {
+      const { id } = req.params;
+      const data = req.body; // data now does NOT include _id
+
+      const result = await partnerRequestsCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: data }
+      );
+
+      // Return updated document
+      const updated = await partnerRequestsCollection.findOne({ _id: new ObjectId(id) });
+
+      res.send({ success: true, updated });
+    });
+
+
+
+
+    app.delete('/my-requests/:id', verifyToken, async (req, res) => {
+      const { id } = req.params;
+
+      const result = await partnerRequestsCollection.deleteOne({
+        _id: new ObjectId(id)
+      });
+
+      res.send({ success: true, result });
+    });
+
 
   } catch (err) {
     console.error("MongoDB connection error:", err);
