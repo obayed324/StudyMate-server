@@ -52,7 +52,8 @@ async function run() {
 
     console.log("MongoDB connected successfully for partners API");
 
-    // GET all partners (with optional search and sort)
+    
+    // GET /partners - search and sort partners
     app.get('/partners', async (req, res) => {
       const { search, sort } = req.query;
       const query = {};
@@ -66,11 +67,17 @@ async function run() {
 
       let cursor = partnersCollection.find(query);
 
+      // Sort logic
       if (sort === 'rating') cursor = cursor.sort({ rating: -1 });
       if (sort === 'experience') cursor = cursor.sort({ experienceLevel: 1 });
 
-      const result = await cursor.toArray();
-      res.send(result);
+      try {
+        const result = await cursor.toArray();
+        res.send({ success: true, partners: result }); // add success flag
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ success: false, message: "Server error" });
+      }
     });
 
 
@@ -88,13 +95,14 @@ async function run() {
         });
         console.log("Top-rated partners route hit");
 
-      } 
+      }
       catch (err) {
         console.error(err);
         res.status(500).send({ success: false, message: "Server error" });
       }
     });
-    // GET partner by ID
+
+    
     app.get('/partners/:id', async (req, res) => {
       const { id } = req.params;
 
@@ -108,8 +116,7 @@ async function run() {
       res.send({ success: true, partner });
     });
 
-    // POST partner request
-    // POST partner request
+   
     app.post('/partners/:id/request', async (req, res) => {
       const { id } = req.params;
       const { userEmail } = req.body;
@@ -121,13 +128,13 @@ async function run() {
       if (!partner)
         return res.status(404).send({ success: false, message: "Partner not found" });
 
-      // increase partner count
+      
       await partnersCollection.updateOne(
         { _id: new ObjectId(id) },
         { $inc: { partnerCount: 1 } }
       );
 
-      // save FULL partner data + user email
+      
       const requestData = {
         partnerId: id,
         partnerName: partner.name,
@@ -149,7 +156,7 @@ async function run() {
     });
 
 
-    // POST /partners - Create a new partner profile
+    
     app.post('/partners', verifyToken, async (req, res) => {
       try {
         const partnerData = req.body;
@@ -224,7 +231,7 @@ async function run() {
         { $set: data }
       );
 
-      // Return updated document
+      
       const updated = await partnerRequestsCollection.findOne({ _id: new ObjectId(id) });
 
       res.send({ success: true, updated });
@@ -243,9 +250,8 @@ async function run() {
       res.send({ success: true, result });
     });
 
-    // GET top-rated partners
-    // GET top-rated partners
     
+
 
 
 
