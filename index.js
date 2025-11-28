@@ -45,12 +45,12 @@ const verifyToken = async (req, res, next) => {
 // Main function
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     const db = client.db('studyMate');
     const partnersCollection = db.collection('allPartner');
     const partnerRequestsCollection = db.collection('partnerRequests');
 
-    console.log("MongoDB connected successfully for partners API");
+    
 
     
     // GET /partners - search and sort partners
@@ -250,14 +250,10 @@ async function run() {
       res.send({ success: true, result });
     });
 
-    
+    console.log("MongoDB connected successfully for partners API");
 
-
-
-
-
-
-  } catch (err) {
+  } 
+  catch (err) {
     console.error("MongoDB connection error:", err);
   }
 }

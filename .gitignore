@@ -1,3 +1,5 @@
 node_modules
 .env
 studymateServiceKey.json
+.vercel
+.env*.local
